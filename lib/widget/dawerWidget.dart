@@ -158,7 +158,7 @@ class MyDrawer extends StatelessWidget {
           ),
           Spacer(),
           MyCustomeText(
-              "BSRM IT,Chattagram", cPrimaryColor, 17, FontWeight.w700)
+              "BSRM IT,Chattogram", cPrimaryColor, 17, FontWeight.w700)
         ],
       ),
     );

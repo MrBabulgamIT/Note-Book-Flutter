@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:note_book/views/HomePage/controller/imagePickerContr.dart';
+import 'package:note_book/views/location/controller/controller.dart';
 import 'package:note_book/widget/bottomWidget.dart';
 import 'package:note_book/widget/colorwidget.dart';
 import 'package:note_book/widget/textfield.dart';
@@ -18,12 +20,22 @@ class AddItemPage extends StatefulWidget {
 }
 
 class _AddItemPageState extends State<AddItemPage> {
+  final LocationController locationController = Get.put(LocationController());
+  @override
+  void initState() {
+    locationController.getCurrentLocation();
+    super.initState();
+  }
+
   Future<void> uploadDataToFirestore() async {
     FirebaseFirestore.instance.collection("Notes").add({
       "note_tittle": tittleController.text,
       "note_discription": subtittleController.text,
       "note_date": dateController.text,
-      "images": _imagePickerController.imagePath.value
+      "images": _imagePickerController.imagePath.value,
+      "current_Location":
+          "${locationController.locationMessageLatitude},${locationController.locationMesLogitude}",
+      "location_address": locationController.locationMessageAddress.value,
     }).then((value) {
       print("Your Data Value Id: ${value.id}");
       Get.back();

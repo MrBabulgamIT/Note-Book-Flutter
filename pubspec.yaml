@@ -57,6 +57,9 @@ dependencies:
   intl: ^0.18.1
   image:
   flutter_image_compress: ^2.0.4
+  geocoding: 
+  location: 
+  permission_handler:
 
 
 

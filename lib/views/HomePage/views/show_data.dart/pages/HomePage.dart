@@ -37,6 +37,9 @@ class _HomePageState extends State<HomePage> {
 
   final TextEditingController searchController = TextEditingController();
 
+  String _searchQuery = '';
+  List<Map> _filteredItems = [];
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -165,7 +168,11 @@ class _HomePageState extends State<HomePage> {
                             Expanded(
                               child: TextField(
                                 controller: searchController,
-                                onChanged: ((value) => {}),
+                                onChanged: ((value) => {
+                                      setState(() {
+                                        _searchQuery = value.toLowerCase();
+                                      }),
+                                    }),
                                 decoration: const InputDecoration(
                                   hintText: 'Search',
                                   hintStyle: TextStyle(color: cPrimaryColor),
@@ -191,129 +198,142 @@ class _HomePageState extends State<HomePage> {
               ),
               Expanded(
                 child: StreamBuilder(
-                    stream: FirebaseFirestore.instance
-                        .collection("Notes")
-                        .snapshots(),
-                    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
+                  stream: FirebaseFirestore.instance
+                      .collection("Notes")
+                      .snapshots(),
+                  builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+
+                    if (snapshot.hasData) {
+                      List<Map> items = snapshot.data!.docs
+                          .map((e) => e.data() as Map)
+                          .toList();
+
+                      _filteredItems = items.where((item) {
+                        final noteTitle =
+                            item["note_tittle"].toString().toLowerCase();
+                        final noteDescription =
+                            item["note_date"].toString().toLowerCase();
+
+                        return noteTitle.contains(_searchQuery) ||
+                            noteDescription.contains(_searchQuery);
+                      }).toList();
+
+                      if (_filteredItems.isEmpty) {
+                        return Center(child: Text("No data found"));
                       }
 
-                      if (snapshot.hasData) {
-                        // QuerySnapshot? querySnapshot = snapshot.data;
-
-                        List<Map> items = snapshot.data!.docs
-                            .map((e) => e.data() as Map)
-                            .toList();
-
-                        return ListView.builder(
-                            itemCount: snapshot.data!.docs.length,
-                            itemBuilder: ((context, index) {
-                              // final firebaseData = snapshot.data!.docs[index];
-                              Map firestoreData = items[index];
-                              print("image item: ${firestoreData["image"]}");
-                              return InkWell(
-                                  onTap: () {
-                                    Get.to(ShowDetailsPage(
-                                      tittle: firestoreData["note_tittle"]
-                                          .toString(),
-                                      subTittle:
-                                          firestoreData["note_discription"]
-                                              .toString(),
-                                      image: firestoreData.containsKey("image")
-                                          ? firestoreData["image"]
-                                          : imagePathh,
-                                      date:
-                                          firestoreData["note_date"].toString(),
-                                    ));
-                                  },
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: 5.h, horizontal: 10.h),
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                          vertical: 10.h, horizontal: 10.w),
-                                      decoration: BoxDecoration(
-                                        boxShadow: const [
-                                          BoxShadow(
-                                              color: Colors.black26,
-                                              blurRadius: 2,
-                                              spreadRadius: 0,
-                                              offset: Offset(-0, -0))
-                                        ],
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          firestoreData.containsKey("image")
-                                              ? ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(50),
-                                                  child: Image.network(
-                                                    firestoreData["image"],
-                                                    height: 50,
-                                                    width: 50,
-                                                  ),
-                                                )
-                                              : ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(50),
-                                                  child: Image.network(
-                                                    imagePathh,
-                                                    height: 50,
-                                                    width: 50,
-                                                  ),
-                                                ),
-                                          SizedBox(
-                                            width: 20.w,
-                                          ),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                MyCustomeText(
-                                                    firestoreData[
-                                                        "note_tittle"],
-                                                    Colors.black,
-                                                    ScreenUtil().setSp(19),
-                                                    FontWeight.w600),
-                                                SizedBox(
-                                                  height: 5.h,
-                                                ),
-                                                MyCustomeText(
-                                                    firestoreData[
-                                                        "note_discription"],
-                                                    Colors.black,
-                                                    15.sp,
-                                                    FontWeight.w500),
-                                                SizedBox(
-                                                  height: 5.h,
-                                                ),
-                                                MyCustomeText(
-                                                    firestoreData["note_date"],
-                                                    Colors.black,
-                                                    15.sp,
-                                                    FontWeight.w500),
-                                                SizedBox(
-                                                  height: 5.h,
-                                                ),
-                                              ],
+                      return ListView.builder(
+                        itemCount: _filteredItems.length,
+                        itemBuilder: ((context, index) {
+                          Map firestoreData = _filteredItems[index];
+                          print("image item: ${firestoreData["image"]}");
+                          return InkWell(
+                            onTap: () {
+                              Get.to(ShowDetailsPage(
+                                tittle: firestoreData["note_tittle"].toString(),
+                                subTittle: firestoreData["note_discription"]
+                                    .toString(),
+                                image: firestoreData.containsKey("image")
+                                    ? firestoreData["image"]
+                                    : imagePathh,
+                                date: firestoreData["note_date"].toString(),
+                                locationAddress:
+                                    firestoreData["location_address"]
+                                        .toString(),
+                              ));
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                  vertical: 5.h, horizontal: 10.h),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 10.h, horizontal: 10.w),
+                                decoration: BoxDecoration(
+                                  boxShadow: const [
+                                    BoxShadow(
+                                        color: Colors.black26,
+                                        blurRadius: 2,
+                                        spreadRadius: 0,
+                                        offset: Offset(-0, -0))
+                                  ],
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    firestoreData.containsKey("image")
+                                        ? ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(50),
+                                            child: Image.network(
+                                              firestoreData["image"],
+                                              height: 50,
+                                              width: 50,
                                             ),
                                           )
+                                        : ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(50),
+                                            child: Image.network(
+                                              imagePathh,
+                                              height: 50,
+                                              width: 50,
+                                            ),
+                                          ),
+                                    SizedBox(
+                                      width: 20.w,
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          MyCustomeText(
+                                              firestoreData["note_tittle"],
+                                              Colors.black,
+                                              ScreenUtil().setSp(19),
+                                              FontWeight.w600),
+                                          SizedBox(
+                                            height: 5.h,
+                                          ),
+                                          MyCustomeText(
+                                              firestoreData["note_discription"],
+                                              Colors.black,
+                                              15.sp,
+                                              FontWeight.w500),
+                                          SizedBox(
+                                            height: 5.h,
+                                          ),
+                                          MyCustomeText(
+                                              firestoreData["note_date"],
+                                              Colors.black,
+                                              15.sp,
+                                              FontWeight.w500),
+                                          SizedBox(
+                                            height: 5.h,
+                                          ),
                                         ],
                                       ),
-                                    ),
-                                  ));
-                            }));
-                      }
-                      return Text("There's no Notes store here");
-                    }),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      );
+                    }
+
+                    return Text("There's no Notes store here");
+                  },
+                ),
               )
             ],
           )),
